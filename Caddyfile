@@ -1,10 +1,15 @@
 {$DOMAIN} {
     encode zstd gzip
 
-    # Public catalog images and videos only. Purchased beat files stay behind
-    # the authenticated/tokenized Django download view.
+    # Public catalog images, streamable previews, and videos only. Purchased
+    # beat files stay behind the authenticated/tokenized Django download view.
     handle_path /media/covers/* {
         root * /srv/media/covers
+        file_server
+    }
+
+    handle_path /media/previews/* {
+        root * /srv/media/previews
         file_server
     }
 

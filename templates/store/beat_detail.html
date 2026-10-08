@@ -10,6 +10,12 @@
     <h1>{{ beat.title }}</h1>
     <p class="meta">{% if beat.bpm %}{{ beat.bpm }} BPM{% endif %}{% if beat.bpm and beat.musical_key %} · {% endif %}{{ beat.musical_key }}</p>
     <p class="price big-price">{{ beat.price|floatformat:2 }} {{ CURRENCY }}</p>
+    {% if beat.preview_file %}
+      <div class="preview">
+        <p class="eyebrow">Preview</p>
+        <audio controls preload="metadata" src="{{ beat.preview_file.url }}"></audio>
+      </div>
+    {% endif %}
     <p>{{ beat.description|linebreaksbr }}</p>
     <ul class="checklist">
       <li>Pay with mobile money or bank</li>

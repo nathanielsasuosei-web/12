@@ -14,7 +14,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from store import payments
-from store.models import Beat, Order, Video
+from store.models import Beat, ContactMessage, Order, Video
 
 User = get_user_model()
 TMP_MEDIA = tempfile.mkdtemp(prefix="12-test-media-")
@@ -64,6 +64,53 @@ class CatalogueTests(BaseFlowTest):
         self.assertEqual(v.embed_url, "https://www.youtube.com/embed/dQw4w9WgXcQ")
         v.video_url = "https://vimeo.com/123456"
         self.assertEqual(v.embed_url, "https://player.vimeo.com/video/123456")
+
+
+class ContactTests(BaseFlowTest):
+    def test_contact_page_renders(self):
+        self.assertContains(self.client.get(reverse("contact")), "Talk to the producer")
+
+    def test_contact_form_prefills_for_logged_in_artist(self):
+        self.client.force_login(self.buyer)
+        resp = self.client.get(reverse("contact"))
+        self.assertContains(resp, "artist@example.com")
+
+    def test_contact_message_is_saved_and_emailed_to_producer_and_sender(self):
+        resp = self.client.post(reverse("contact"), {
+            "name": "Kwame",
+            "email": "kwame@example.com",
+            "subject": "Custom beat",
+            "message": "I need a 140 BPM afrobeat instrumental.",
+        })
+        self.assertRedirects(resp, reverse("contact"))
+        msg = ContactMessage.objects.get()
+        self.assertEqual(msg.name, "Kwame")
+        self.assertFalse(msg.is_read)
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(mail.outbox[0].to, ["producer@example.com"])
+        self.assertIn("kwame@example.com", mail.outbox[0].body)
+        self.assertEqual(mail.outbox[1].to, ["kwame@example.com"])
+
+    def test_contact_form_rejects_empty_message(self):
+        resp = self.client.post(reverse("contact"), {
+            "name": "Kwame",
+            "email": "kwame@example.com",
+            "subject": "Hi",
+            "message": "",
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(ContactMessage.objects.count(), 0)
+        self.assertEqual(len(mail.outbox), 0)
+
+
+class PreviewTests(BaseFlowTest):
+    def test_detail_shows_preview_player_when_set(self):
+        self.beat.preview_file = SimpleUploadedFile("night-preview.mp3", b"ID3preview", content_type="audio/mpeg")
+        self.beat.save()
+        self.assertContains(self.client.get(self.beat.get_absolute_url()), "<audio")
+
+    def test_detail_hides_preview_player_when_missing(self):
+        self.assertNotContains(self.client.get(self.beat.get_absolute_url()), "<audio")
 
 
 class DeploymentReadinessTests(TestCase):

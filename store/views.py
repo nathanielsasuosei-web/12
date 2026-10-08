@@ -21,8 +21,8 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from . import payments, services
-from .forms import SignUpForm
+from . import emails, payments, services
+from .forms import ContactForm, SignUpForm
 from .models import Beat, Order, Video
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,23 @@ def beat_detail(request, pk):
 
 def video_list(request):
     return render(request, "store/video_list.html", {"videos": Video.objects.all()})
+
+
+def contact(request):
+    """Contact page: artists send a message, the producer gets it by email."""
+    initial = {}
+    if request.user.is_authenticated:
+        initial = {"name": request.user.username, "email": request.user.email}
+    if request.method == "POST":
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            contact_message = form.save()
+            emails.send_contact_emails(contact_message)
+            messages.success(request, "Message sent! The producer will reply to your email.")
+            return redirect("contact")
+    else:
+        form = ContactForm(initial=initial)
+    return render(request, "store/contact.html", {"form": form})
 
 
 def signup(request):

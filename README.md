@@ -2,11 +2,12 @@
 
 A storefront for a music producer, built with Django.
 
-- **Admin (producer):** upload beats (audio + cover, price, BPM, key) and videos (file or YouTube/Vimeo link) at `/admin/`. Every purchase appears under *Orders*.
-- **Artists (customers):** sign up, log in, browse beats and videos, and buy beats.
+- **Admin (producer):** upload beats (full audio + optional streamable preview + cover, price, BPM, key) and videos (file or YouTube/Vimeo link) at `/admin/`. Every purchase appears under *Orders* and every artist message under *Contact messages*.
+- **Artists (customers):** sign up, log in, browse beats and videos, stream previews, and buy beats.
 - **Payments:** Paystack checkout with **mobile money** and **bank** channels. Payments are verified server-side and via Paystack webhooks, and each order is fulfilled exactly once.
 - **Delivery:** after payment, the buyer gets an email with a receipt, a download link, and the beat attached when it is under the size limit. The producer gets a "new sale" email. Buyers can also see their purchases at `/dashboard/`.
-- **Animated hero** on the home page (canvas equalizer + shimmer text), with reduced-motion support.
+- **Messages by email:** the `/contact/` page forwards artist messages to the producer's inbox and sends the artist a confirmation email.
+- **Animated red hero** on the home page (glowing canvas equalizer, floating notes, shimmer text, scrolling ticker), with reduced-motion support.
 
 ## Run locally
 
@@ -19,6 +20,14 @@ python manage.py runserver 0.0.0.0:8000
 ```
 
 Open http://localhost:8000 (admin at `/admin/`).
+
+Optional demo content (covers, previews, beats, a video) for a first look:
+
+```bash
+python manage.py seed_demo
+```
+
+This also creates a producer login (`producer` / `producer123`) if one does not exist yet.
 
 With no `PAYSTACK_SECRET_KEY` set, checkout runs in **test mode**: a local page lets you simulate a mobile-money or bank payment, which exercises the full fulfilment and email flow. No money moves.
 

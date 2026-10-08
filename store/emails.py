@@ -70,3 +70,37 @@ def _notify_producer(order):
         )
     except Exception:
         logger.exception("Failed to notify producer for order %s", order.pk)
+
+
+def send_contact_emails(contact_message):
+    """Forward an artist's message to the producer and confirm receipt to the sender."""
+    if settings.PRODUCER_EMAIL:
+        try:
+            EmailMessage(
+                subject=f"New message: {contact_message.subject}",
+                body=(
+                    f"From: {contact_message.name} <{contact_message.email}>\n\n"
+                    f"{contact_message.message}\n\n"
+                    f"Reply directly to {contact_message.email}.\n"
+                    f"Admin: {_absolute('/admin/store/contactmessage/')}"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[settings.PRODUCER_EMAIL],
+                reply_to=[contact_message.email],
+            ).send()
+        except Exception:
+            logger.exception("Failed to forward contact message %s", contact_message.pk)
+    try:
+        send_mail(
+            subject=f"We got your message: {contact_message.subject}",
+            message=(
+                f"Hi {contact_message.name},\n\n"
+                f"Thanks for reaching out to {settings.SITE_NAME}! "
+                f"The producer will reply to this email address shortly.\n\n"
+                f"Your message:\n{contact_message.message}\n"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[contact_message.email],
+        )
+    except Exception:
+        logger.exception("Failed to confirm contact message %s", contact_message.pk)

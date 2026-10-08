@@ -22,6 +22,14 @@ class Beat(models.Model):
     audio_file = models.FileField(
         upload_to="beats/",
         validators=[FileExtensionValidator(["mp3", "wav", "aiff", "aif", "flac", "m4a", "zip"])],
+        help_text="Full-quality file. Only delivered to buyers after payment.",
+    )
+    preview_file = models.FileField(
+        upload_to="previews/",
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(["mp3", "wav", "ogg", "m4a"])],
+        help_text="Optional short/tagged preview that visitors can stream before buying.",
     )
     cover_image = models.ImageField(upload_to="covers/", blank=True, null=True)
     bpm = models.PositiveIntegerField(blank=True, null=True)
@@ -99,3 +107,20 @@ class Order(models.Model):
 
     def get_download_url(self):
         return reverse("download", args=[self.download_token])
+
+
+class ContactMessage(models.Model):
+    """Message sent by an artist through the contact page. Delivered by email."""
+
+    name = models.CharField(max_length=120)
+    email = models.EmailField()
+    subject = models.CharField(max_length=200)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.subject} — {self.name}"
