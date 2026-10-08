@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section">
+  <h1>Videos</h1>
+  {% for video in videos %}
+    <article class="video-item" id="video-{{ video.pk }}">
+      <h2>{{ video.title }}</h2>
+      {% if video.description %}<p class="muted">{{ video.description|linebreaksbr }}</p>{% endif %}
+      {% if video.embed_url %}
+        <div class="embed"><iframe src="{{ video.embed_url }}" title="{{ video.title }}" allowfullscreen loading="lazy"></iframe></div>
+      {% elif video.video_file %}
+        <video controls preload="metadata" src="{{ video.video_file.url }}"></video>
+      {% elif video.video_url %}
+        <p><a class="btn btn-small" href="{{ video.video_url }}" target="_blank" rel="noopener">Watch video</a></p>
+      {% endif %}
+    </article>
+  {% empty %}
+    <p class="muted">No videos yet.</p>
+  {% endfor %}
+</section>
+{% endblock %}
