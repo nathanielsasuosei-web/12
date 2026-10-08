@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 
 import dj_database_url
-from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -42,7 +41,9 @@ IS_VERCEL_DEPLOY = env_bool("VERCEL", False) and VERCEL_ENVIRONMENT != "developm
 SITE_NAME = env("SITE_NAME", "12")
 SITE_URL = env("SITE_URL", "http://localhost:8000").rstrip("/")
 
-SECRET_KEY = env("DJANGO_SECRET_KEY", "dev-insecure-change-me-in-production")  # must be set in production
+# Development-only fallback. config/production.py refuses to serve with it when DEBUG is off.
+DEV_SECRET_KEY = "dev-insecure-change-me-in-production"
+SECRET_KEY = env("DJANGO_SECRET_KEY", DEV_SECRET_KEY)
 DEBUG = env_bool("DJANGO_DEBUG", not IS_VERCEL_DEPLOY)
 ALLOWED_HOSTS = list(dict.fromkeys(
     env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,.e2b.app") + VERCEL_HOSTS
@@ -155,19 +156,9 @@ PAYMENT_CURRENCY = env("PAYMENT_CURRENCY", "GHS")
 PAYMENT_CHANNELS = env_list("PAYMENT_CHANNELS", "mobile_money,bank")
 
 # Production hardening (only when DEBUG is off, so local development stays plain HTTP).
-if IS_VERCEL_DEPLOY and DEBUG:
-    raise ImproperlyConfigured("Vercel deployments must set DJANGO_DEBUG=0.")
-
+# Missing production secrets are not raised here: config/production.py reports them when the
+# app starts, because Vercel imports this module during its build (see config/production.py).
 if not DEBUG:
-    if IS_VERCEL_DEPLOY and not DATABASE_URL:
-        raise ImproperlyConfigured("Vercel deployments require DATABASE_URL; SQLite storage is not persistent.")
-    if len(SECRET_KEY) < 32 or SECRET_KEY == "dev-insecure-change-me-in-production":
-        raise ImproperlyConfigured("Set DJANGO_SECRET_KEY to a random value of at least 32 characters.")
-    if not PAYSTACK_SECRET_KEY or PAYMENT_PROVIDER != "paystack":
-        raise ImproperlyConfigured(
-            "Production requires PAYSTACK_SECRET_KEY and PAYMENT_PROVIDER=paystack; mock checkout is local-only."
-        )
-
     # Serve fingerprinted static assets from Django without a separate web server.
     MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
     STORAGES = {
