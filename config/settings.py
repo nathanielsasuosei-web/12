@@ -20,7 +20,7 @@ def env_list(name, default=""):
 SITE_NAME = env("SITE_NAME", "12")
 SITE_URL = env("SITE_URL", "http://localhost:8000").rstrip("/")
 
-SECRET_KEY = env("DJANGO_SECRET_KEY", "dev-insecure-change-me-in-production")
+SECRET_KEY = env("DJANGO_SECRET_KEY", "dev-insecure-change-me-in-production")  # must be set in production
 DEBUG = env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,.e2b.app")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "https://*.e2b.app,http://localhost:8000")
@@ -117,6 +117,12 @@ PAYMENT_PROVIDER = env("PAYMENT_PROVIDER", "paystack" if PAYSTACK_SECRET_KEY els
 PAYMENT_CURRENCY = env("PAYMENT_CURRENCY", "GHS")
 PAYMENT_CHANNELS = env_list("PAYMENT_CHANNELS", "mobile_money,bank")
 
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# Production hardening (only when DEBUG is off, so local development stays plain HTTP).
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
+    SECURE_HSTS_SECONDS = int(env("DJANGO_HSTS_SECONDS", "3600"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
