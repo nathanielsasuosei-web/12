@@ -22,13 +22,31 @@ Open http://localhost:8000 (admin at `/admin/`).
 
 With no `PAYSTACK_SECRET_KEY` set, checkout runs in **test mode**: a local page lets you simulate a mobile-money or bank payment, which exercises the full fulfilment and email flow. No money moves.
 
-## Go live
+## Production deployment (Docker Compose)
 
-1. Create a Paystack account and set `PAYSTACK_SECRET_KEY` (and `PAYMENT_CURRENCY`, for example `GHS`, `NGN`, `KES`, or `ZAR`, matching your Paystack account).
-2. In the Paystack dashboard, set the webhook URL to `https://yourdomain.com/payments/webhook/`.
-3. Set `SITE_URL`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_SECRET_KEY`, and `DJANGO_DEBUG=0`. See `.env.example`.
-4. Configure SMTP (`EMAIL_BACKEND`, `EMAIL_HOST`, …) and `PRODUCER_EMAIL`.
-5. Serve with a WSGI server (for example gunicorn) behind HTTPS. For production media, move `MEDIA_ROOT` to object storage such as S3 or DigitalOcean Spaces. Media is served by Django only in DEBUG mode.
+The repository includes a production Docker image, PostgreSQL, and Caddy for automatic HTTPS. This is a single-host/VPS deployment: point a domain at the host, allow inbound ports 80 and 443, and install Docker Engine with the Compose plugin. No cloud account or deployment credentials are needed by the app itself.
+
+1. Copy `.env.example` to `.env`. Set `DOMAIN`, `SITE_URL`, `DJANGO_ALLOWED_HOSTS`, and `DJANGO_CSRF_TRUSTED_ORIGINS` to your real domain. Generate two different random values with `python3 -c 'import secrets; print(secrets.token_hex(32))'` for `DJANGO_SECRET_KEY` and `POSTGRES_PASSWORD`.
+2. Set a live `PAYSTACK_SECRET_KEY`, the currency configured in Paystack, SMTP credentials, `DEFAULT_FROM_EMAIL`, and `PRODUCER_EMAIL`. Production refuses to start with the development secret, a missing Paystack key, or mock payments enabled.
+3. Build the image, start PostgreSQL, apply migrations, then bring up the site and HTTPS proxy:
+
+   ```bash
+   docker compose build
+   docker compose up -d db
+   docker compose run --rm web python manage.py migrate --noinput
+   docker compose up -d web caddy
+   docker compose run --rm web python manage.py createsuperuser
+   ```
+
+4. In Paystack, set the webhook URL to `https://yourdomain.com/payments/webhook/`.
+
+For later releases, run `docker compose build web`, `docker compose run --rm web python manage.py migrate --noinput`, then `docker compose up -d web caddy`. PostgreSQL and uploaded media live in named Docker volumes; back them up independently and do not use `docker compose down -v` unless you intend to delete that data. Caddy serves public covers/videos, while paid beat files are only delivered through the existing Django download endpoint. This starter is intended for one host; use managed database/object storage and an external backup plan before scaling out.
+
+### Alternative: Vercel
+
+`vercel.json` pins the Vercel Framework Preset to **Django**, so Vercel won't invoke `next build`. Vercel detects `manage.py`, uses `config/wsgi.py`, and runs `collectstatic` automatically. Deploy a commit containing `vercel.json`, set Vercel's Root Directory to the repository root, and remove any manually configured `next build` Build Command or Next.js Output Directory override.
+
+Before deploying, add Vercel environment variables for `DJANGO_DEBUG=0`, a random `DJANGO_SECRET_KEY`, `PAYSTACK_SECRET_KEY`, `DATABASE_URL` (managed PostgreSQL), `SITE_URL`, `DJANGO_CSRF_TRUSTED_ORIGINS`, SMTP settings, and producer email. The app automatically trusts the Vercel deployment URLs; set your custom production domain in `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS`, and run `python manage.py migrate` against the configured database. Vercel's filesystem is ephemeral and this app currently uses filesystem media storage, so beat/cover/video uploads will not persist there; an object-storage backend must be added before using admin uploads in production. The Docker Compose setup above is ready for persistent local media volumes without that extra storage integration.
 
 ## Tests
 
@@ -41,6 +59,9 @@ The tests cover signup, purchases in test mode, Paystack initialise and verify, 
 ## Project layout
 
 ```
+Dockerfile         production Django image
+compose.yaml       PostgreSQL, web app, HTTPS proxy
+Caddyfile          TLS reverse proxy + public media routing
 config/            settings, root URLs
 store/
   models.py        Beat, Video, Order

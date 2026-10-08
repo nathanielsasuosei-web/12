@@ -8,6 +8,7 @@ from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.db import DatabaseError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -20,6 +21,7 @@ TMP_MEDIA = tempfile.mkdtemp(prefix="12-test-media-")
 
 
 @override_settings(
+    DEBUG=True,
     MEDIA_ROOT=TMP_MEDIA,
     PAYMENT_PROVIDER="mock",
     PAYSTACK_SECRET_KEY="",
@@ -62,6 +64,24 @@ class CatalogueTests(BaseFlowTest):
         self.assertEqual(v.embed_url, "https://www.youtube.com/embed/dQw4w9WgXcQ")
         v.video_url = "https://vimeo.com/123456"
         self.assertEqual(v.embed_url, "https://player.vimeo.com/video/123456")
+
+
+class DeploymentReadinessTests(TestCase):
+    def test_healthcheck_returns_ok_when_database_is_available(self):
+        response = self.client.get(reverse("healthz"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_healthcheck_reports_database_outage(self):
+        with mock.patch("store.views.connection.cursor", side_effect=DatabaseError("offline")):
+            response = self.client.get(reverse("healthz"))
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json(), {"status": "unavailable"})
+
+    def test_mock_checkout_is_disabled_when_debug_is_off(self):
+        with override_settings(DEBUG=False, PAYMENT_PROVIDER="mock"):
+            response = self.client.get(reverse("mock_checkout", args=["not-a-real-reference"]))
+        self.assertEqual(response.status_code, 404)
 
 
 class SignupAndAccessTests(BaseFlowTest):
