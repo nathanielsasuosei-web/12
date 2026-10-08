@@ -44,9 +44,17 @@ For later releases, run `docker compose build web`, `docker compose run --rm web
 
 ### Alternative: Vercel
 
-`vercel.json` pins the Vercel Framework Preset to **Django**, so Vercel won't invoke `next build`. Vercel detects `manage.py`, uses `config/wsgi.py`, and runs `collectstatic` automatically. Deploy a commit containing `vercel.json`, set Vercel's Root Directory to the repository root, and remove any manually configured `next build` Build Command or Next.js Output Directory override.
+`vercel.json` pins the Framework Preset to Django, avoiding the Next.js build. Vercel detects `manage.py`, loads `config/wsgi.py`, runs `collectstatic` automatically, and serves collected static files from its CDN. Deploy a commit containing `vercel.json`, set Vercel's Root Directory to the repository root, and clear any manual `next build` command or Next.js Output Directory override.
 
-Before deploying, add Vercel environment variables for `DJANGO_DEBUG=0`, a random `DJANGO_SECRET_KEY`, `PAYSTACK_SECRET_KEY`, `DATABASE_URL` (managed PostgreSQL), `SITE_URL`, `DJANGO_CSRF_TRUSTED_ORIGINS`, SMTP settings, and producer email. The app automatically trusts the Vercel deployment URLs; set your custom production domain in `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS`, and run `python manage.py migrate` against the configured database. Vercel's filesystem is ephemeral and this app currently uses filesystem media storage, so beat/cover/video uploads will not persist there; an object-storage backend must be added before using admin uploads in production. The Docker Compose setup above is ready for persistent local media volumes without that extra storage integration.
+Set these variables in every Vercel environment you deploy to (including Preview if used):
+
+- `DJANGO_DEBUG=0` and a random `DJANGO_SECRET_KEY` of at least 32 characters
+- `DATABASE_URL` for a managed PostgreSQL database
+- `PAYSTACK_SECRET_KEY`, `PAYMENT_CURRENCY`, and `SITE_URL`
+- `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS` for your custom domain
+- SMTP settings and `PRODUCER_EMAIL`
+
+The app adds Vercel's deployment hostnames to the allowed-host and CSRF lists automatically. Run `python manage.py migrate` against the configured database before serving real orders. Vercel functions have an ephemeral filesystem and a 4.5 MB request/response body limit: this project currently stores uploads on the local filesystem, so beat, cover, and video uploads won't persist there. Add an object-storage backend before using admin uploads on Vercel. The Docker Compose setup above supports persistent media volumes on a single host.
 
 ## Tests
 
