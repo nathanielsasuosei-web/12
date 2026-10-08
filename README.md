@@ -30,6 +30,23 @@ With no `PAYSTACK_SECRET_KEY` set, checkout runs in **test mode**: a local page 
 4. Configure SMTP (`EMAIL_BACKEND`, `EMAIL_HOST`, …) and `PRODUCER_EMAIL`.
 5. Serve with a WSGI server (for example gunicorn) behind HTTPS. For production media, move `MEDIA_ROOT` to object storage such as S3 or DigitalOcean Spaces. Media is served by Django only in DEBUG mode.
 
+## Deploy on Vercel
+
+`vercel.json` sets the Framework Preset to Django. Vercel then builds the repo as a Python function: it installs `requirements.txt`, runs `collectstatic`, and serves `config/wsgi.py`. Static files come from Vercel's CDN.
+
+Set these environment variables on the Vercel project (replace `your-project` with your `.vercel.app` project name):
+
+- `DJANGO_SECRET_KEY`: a long random string
+- `DJANGO_DEBUG=0`
+- `DJANGO_ALLOWED_HOSTS=your-project.vercel.app` (add any custom domain)
+- `DJANGO_CSRF_TRUSTED_ORIGINS=https://your-project.vercel.app`
+- `SITE_URL=https://your-project.vercel.app`
+- Payment, email, and `PRODUCER_EMAIL` settings as in `.env.example`
+
+Set `PAYSTACK_SECRET_KEY` before the site is public. Without it, checkout runs in test mode, and a buyer can mark an order paid without paying.
+
+Vercel's function filesystem is read-only except `/tmp`, and request and response bodies are capped at 4.5 MB. The default SQLite database and the local `media/` folder can't be used there, so move the database and media storage to hosted services before you take real orders.
+
 ## Tests
 
 ```bash
