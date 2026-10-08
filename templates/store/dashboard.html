@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section">
+  <h1>Hi, {{ user.username }}</h1>
+  <p class="muted">Your purchases. Download links are also in your confirmation emails.</p>
+  {% if orders %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Order</th><th>Beat</th><th>Amount</th><th>Status</th><th>Date</th><th></th></tr></thead>
+      <tbody>
+      {% for order in orders %}
+        <tr>
+          <td>#{{ order.pk }}</td>
+          <td>{{ order.beat.title }}</td>
+          <td>{{ order.amount|floatformat:2 }} {{ order.currency }}</td>
+          <td><span class="badge badge-{{ order.status|lower }}">{{ order.get_status_display }}</span></td>
+          <td>{{ order.created_at|date:"M j, Y" }}</td>
+          <td>{% if order.is_paid %}<a class="btn btn-small" href="{{ order.get_download_url }}">Download</a>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p>You have no purchases yet. <a href="{% url 'beat_list' %}">Find your first beat →</a></p>
+  {% endif %}
+</section>
+{% endblock %}

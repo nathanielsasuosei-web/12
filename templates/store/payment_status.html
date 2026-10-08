@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Payment · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="section narrow">
+  {% if order.is_paid %}
+    <h1>Payment successful 🎉</h1>
+    <p>Thanks, {{ order.user.username }}. We've emailed your receipt and the beat to <strong>{{ order.user.email }}</strong>.</p>
+    <p><a class="btn btn-primary" href="{{ order.get_download_url }}">Download “{{ order.beat.title }}” now</a></p>
+  {% elif order.status == "FAILED" %}
+    <h1>Payment not completed</h1>
+    <p>Your payment was not successful. You can try again from the beat page.</p>
+    <p><a class="btn" href="{{ order.beat.get_absolute_url }}">Back to beat</a></p>
+  {% else %}
+    <h1>Payment pending</h1>
+    <p>We're waiting for confirmation from the payment provider. This usually takes a few seconds — refresh this page shortly. You'll get an email as soon as it's confirmed.</p>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  {% endif %}
+  <p class="muted small">Order #{{ order.pk }} · {{ order.amount|floatformat:2 }} {{ order.currency }}</p>
+  <p><a href="{% url 'dashboard' %}">Go to my purchases →</a></p>
+</section>
+{% endblock %}
