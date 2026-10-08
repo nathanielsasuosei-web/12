@@ -3,6 +3,14 @@
 {% block content %}
 <section class="hero">
   <canvas id="hero-canvas" aria-hidden="true"></canvas>
+  <div class="notes" aria-hidden="true">
+    <span style="--x:8%;--s:1.6rem;--t:11s;--dl:0s">♪</span>
+    <span style="--x:22%;--s:2.4rem;--t:14s;--dl:2s">♫</span>
+    <span style="--x:48%;--s:1.4rem;--t:10s;--dl:1s">♪</span>
+    <span style="--x:66%;--s:2rem;--t:13s;--dl:3s">♫</span>
+    <span style="--x:84%;--s:1.5rem;--t:12s;--dl:.5s">♪</span>
+    <span style="--x:93%;--s:2.2rem;--t:15s;--dl:4s">♫</span>
+  </div>
   <div class="hero-content">
     <p class="eyebrow anim-up" style="--d:0ms">Producer · Beatmaker · Director</p>
     <h1 class="anim-up" style="--d:120ms">Hear it. <span class="shimmer">Buy it.</span> Make it yours.</h1>
@@ -11,8 +19,26 @@
       <a class="btn btn-primary pulse" href="{% url 'beat_list' %}">Browse beats</a>
       <a class="btn btn-ghost" href="{% url 'video_list' %}">Watch videos</a>
     </div>
+    <div class="hero-stats anim-up" style="--d:480ms">
+      <div><strong>Mobile Money</strong><span>MTN · Telecel · AirtelTigo</span></div>
+      <div><strong>Bank</strong><span>Cards & transfers</span></div>
+      <div><strong>Instant email</strong><span>Receipt + beat file</span></div>
+    </div>
   </div>
 </section>
+
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track">
+    <span>🔥 New beats weekly</span><span>·</span>
+    <span>Pay with Mobile Money</span><span>·</span>
+    <span>Pay with Bank</span><span>·</span>
+    <span>Instant delivery by email</span><span>·</span>
+    <span>🔥 New beats weekly</span><span>·</span>
+    <span>Pay with Mobile Money</span><span>·</span>
+    <span>Pay with Bank</span><span>·</span>
+    <span>Instant delivery by email</span><span>·</span>
+  </div>
+</div>
 
 <section class="section">
   <div class="section-head">
