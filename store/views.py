@@ -6,8 +6,16 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.db import DatabaseError, connection
 from django.db.models import F, Q
-from django.http import FileResponse, Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
+from django.http import (
+    FileResponse,
+    Http404,
+    HttpResponse,
+    HttpResponseBadRequest,
+    HttpResponseForbidden,
+    JsonResponse,
+)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
@@ -20,6 +28,17 @@ from .models import Beat, Order, Video
 logger = logging.getLogger(__name__)
 
 MOCK_CHANNELS = {"mobile_money": "Mobile Money", "bank": "Bank Account"}
+
+
+@require_GET
+def healthz(request):
+    """Readiness check for the web process and its database connection."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+    except DatabaseError:
+        return JsonResponse({"status": "unavailable"}, status=503)
+    return JsonResponse({"status": "ok"})
 
 
 def _absolute(path):
@@ -141,8 +160,8 @@ def payment_webhook(request):
 
 
 def mock_checkout(request, reference):
-    """Local stand-in for the gateway's payment page. Only available when PAYMENT_PROVIDER=mock."""
-    if settings.PAYMENT_PROVIDER != "mock":
+    """Local stand-in for the gateway's payment page; never enable it in production."""
+    if not settings.DEBUG or settings.PAYMENT_PROVIDER != "mock":
         raise Http404
     order = get_object_or_404(Order.objects.select_related("beat", "user"), payment_reference=reference)
 
