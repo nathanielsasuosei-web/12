@@ -1,0 +1,8 @@
+Hi {{ message.name }},
+
+Thanks for getting in touch. We received your message about "{{ message.get_topic_display }}" and will reply by email.
+
+Your message:
+{{ message.message }}
+
+{{ site_name }}

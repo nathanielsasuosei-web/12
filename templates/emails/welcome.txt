@@ -1,0 +1,8 @@
+Hi {{ user.first_name|default:"there" }},
+
+Welcome to {{ site_name }}. Your account is ready.
+
+Browse beats and videos here: {{ site_url }}/beats/
+
+Thanks for being here,
+{{ site_name }}

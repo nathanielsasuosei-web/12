@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}My purchases · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head"><h1>My purchases</h1></div>
+  {% if orders %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Beat</th><th>Amount</th><th>Status</th><th>Date</th><th></th></tr></thead>
+        <tbody>
+          {% for order in orders %}
+          <tr>
+            <td>{{ order.beat.title }}</td>
+            <td>GHS {{ order.amount_ghs }}</td>
+            <td><span class="badge badge-{{ order.status }}">{{ order.get_status_display }}</span></td>
+            <td>{{ order.created_at|date:"j M Y" }}</td>
+            <td><a href="{{ order.get_absolute_url }}">Details</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty">You have not bought any beats yet. <a href="{% url 'catalog:beat_list' %}">Browse beats</a></p>
+  {% endif %}
+</section>
+{% endblock %}

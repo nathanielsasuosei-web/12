@@ -1,28 +1,19 @@
-{$DOMAIN} {
-    encode zstd gzip
+{$SITE_DOMAIN} {
+	encode zstd gzip
 
-    # Public catalog images, streamable previews, and videos only. Purchased
-    # beat files stay behind the authenticated/tokenized Django download view.
-    handle_path /media/covers/* {
-        root * /srv/media/covers
-        file_server
-    }
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
 
-    handle_path /media/previews/* {
-        root * /srv/media/previews
-        file_server
-    }
+	# Public uploads (cover art, MP3 previews, videos). Private beat files are not in this volume.
+	handle /media/* {
+		root * /srv
+		file_server
+	}
 
-    handle_path /media/videos/* {
-        root * /srv/media/videos
-        file_server
-    }
-
-    handle /media/* {
-        respond "Not found" 404
-    }
-
-    handle {
-        reverse_proxy web:8000
-    }
+	handle {
+		reverse_proxy app:8000
+	}
 }

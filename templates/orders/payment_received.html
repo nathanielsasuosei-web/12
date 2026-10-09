@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Payment · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="section narrow">
+  <h1>{% if order.is_paid %}Payment received{% else %}Payment is being confirmed{% endif %}</h1>
+  <p>Order {{ order.reference }} for <strong>{{ order.beat.title }}</strong>.</p>
+  {% if order.is_paid %}
+    <p>The full files are on their way to your email. You can also <a href="{% url 'accounts:login' %}">sign in</a> to download them from My purchases.</p>
+  {% else %}
+    <p>Paystack has not confirmed this payment yet. We will email you the download as soon as it does.</p>
+  {% endif %}
+  <p><a class="btn" href="{% url 'catalog:beat_list' %}">Back to beats</a></p>
+</section>
+{% endblock %}

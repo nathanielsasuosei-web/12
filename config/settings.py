@@ -1,56 +1,52 @@
-"""Settings for the "12" beat store. Most values can be overridden with environment variables."""
+"""Django settings for the beat store.
+
+Every value comes from an environment variable with a safe default. See
+.env.example for the full list. Production checks live in config/production.py.
+"""
+
 import os
 from pathlib import Path
 
-import dj_database_url
-from django.core.exceptions import ImproperlyConfigured
+from django.urls import reverse_lazy
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+DEV_SECRET_KEY = "django-insecure-development-only-do-not-use-in-production-0123456789"
 
-def env(name, default=None):
-    return os.environ.get(name, default)
+
+def env(name, default=""):
+    """Return a stripped environment value, or the default when blank or unset."""
+    value = os.environ.get(name, "").strip()
+    return value or default
 
 
 def env_bool(name, default=False):
-    return str(env(name, default)).strip().lower() in ("1", "true", "yes", "on")
+    raw = os.environ.get(name, "").strip().lower()
+    if not raw:
+        return default
+    return raw in {"1", "true", "yes", "on"}
 
 
 def env_list(name, default=""):
     return [item.strip() for item in env(name, default).split(",") if item.strip()]
 
 
-def vercel_hosts():
-    """Include the deployment URLs Vercel assigns to preview and production builds."""
-    hosts = []
-    for name in ("VERCEL_URL", "VERCEL_BRANCH_URL", "VERCEL_PROJECT_PRODUCTION_URL"):
-        host = env(name, "").strip()
-        if host.startswith("https://"):
-            host = host[len("https://"):]
-        elif host.startswith("http://"):
-            host = host[len("http://"):]
-        host = host.rstrip("/")
-        if host and host not in hosts:
-            hosts.append(host)
-    return hosts
+def env_int(name, default):
+    raw = env(name)
+    try:
+        return int(raw) if raw else default
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a whole number, got {raw!r}") from exc
 
 
-VERCEL_HOSTS = vercel_hosts()
-VERCEL_ENVIRONMENT = env("VERCEL_ENV", "").strip().lower()
-IS_VERCEL_DEPLOY = env_bool("VERCEL", False) and VERCEL_ENVIRONMENT != "development"
+DEBUG = env_bool("DJANGO_DEBUG", default=False)
+SECRET_KEY = env("DJANGO_SECRET_KEY", DEV_SECRET_KEY)
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
-SITE_NAME = env("SITE_NAME", "12")
+SITE_NAME = env("SITE_NAME", "Beat Store")
 SITE_URL = env("SITE_URL", "http://localhost:8000").rstrip("/")
-
-SECRET_KEY = env("DJANGO_SECRET_KEY", "dev-insecure-change-me-in-production")  # must be set in production
-DEBUG = env_bool("DJANGO_DEBUG", not IS_VERCEL_DEPLOY)
-ALLOWED_HOSTS = list(dict.fromkeys(
-    env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,.e2b.app") + VERCEL_HOSTS
-))
-CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(
-    env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "https://*.e2b.app,http://localhost:8000")
-    + [f"https://{host}" for host in VERCEL_HOSTS]
-))
+PRODUCER_EMAIL = env("PRODUCER_EMAIL")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -59,11 +55,15 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "store",
+    "accounts",
+    "catalog",
+    "orders",
+    "contact",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -73,6 +73,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "config.urls"
+WSGI_APPLICATION = "config.wsgi.application"
 
 TEMPLATES = [
     {
@@ -84,30 +85,22 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "store.context_processors.site",
+                "catalog.context_processors.site",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = "config.wsgi.application"
+_sqlite_path = Path(env("SQLITE_PATH", str(BASE_DIR / "data" / "db.sqlite3")))
+_sqlite_path.parent.mkdir(parents=True, exist_ok=True)
 
-DATABASE_URL = env("DATABASE_URL", "").strip()
-if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=int(env("DB_CONN_MAX_AGE", "600")),
-            conn_health_checks=True,
-        )
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": str(_sqlite_path),
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": env("SQLITE_PATH", str(BASE_DIR / "db.sqlite3")),
-        }
-    }
+}
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -116,69 +109,64 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+LANGUAGE_CODE = "en-gb"
+TIME_ZONE = "Africa/Accra"
 USE_I18N = True
 USE_TZ = True
 
+# Static files (CSS, JS) are shipped with the app and served by WhiteNoise.
 STATIC_URL = "/static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+
+# Public uploads: cover art, MP3 previews, videos. Served by the web server.
 MEDIA_URL = "/media/"
 MEDIA_ROOT = Path(env("MEDIA_ROOT", str(BASE_DIR / "media")))
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+# Full-quality beat files. Never served directly; only sent through paid,
+# tokenised download links.
+PRIVATE_MEDIA_ROOT = Path(env("PRIVATE_MEDIA_ROOT", str(BASE_DIR / "private_media")))
 
-LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "dashboard"
-LOGOUT_REDIRECT_URL = "home"
+# Login and accounts
+LOGIN_URL = reverse_lazy("accounts:login")
+LOGIN_REDIRECT_URL = reverse_lazy("orders:my_orders")
+LOGOUT_REDIRECT_URL = reverse_lazy("catalog:home")
 
-# Email: console backend by default (emails print to the server log).
-# Set EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend plus the EMAIL_* values for real delivery.
-EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+# Email. Development prints messages to the console. Production uses SMTP.
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
+)
 EMAIL_HOST = env("EMAIL_HOST", "localhost")
-EMAIL_PORT = int(env("EMAIL_PORT", "587"))
-EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "12 Beats <noreply@example.com>")
-# Address that receives a "new sale" notification for every paid order.
-PRODUCER_EMAIL = env("PRODUCER_EMAIL", "")
-# Beats up to this size are attached to the purchase email; larger ones are sent as a download link only.
-EMAIL_ATTACH_MAX_BYTES = int(env("EMAIL_ATTACH_MAX_BYTES", str(15 * 1024 * 1024)))
+EMAIL_PORT = env_int("EMAIL_PORT", 587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", f"{SITE_NAME} <no-reply@example.com>")
+EMAIL_TIMEOUT = 20
 
-# Payments. "paystack" supports mobile money and bank channels in supported African countries.
-# "mock" simulates checkout locally (used automatically when no Paystack key is configured).
-PAYSTACK_SECRET_KEY = env("PAYSTACK_SECRET_KEY", "")
-PAYMENT_PROVIDER = env("PAYMENT_PROVIDER", "paystack" if PAYSTACK_SECRET_KEY else "mock")
-PAYMENT_CURRENCY = env("PAYMENT_CURRENCY", "GHS")
-PAYMENT_CHANNELS = env_list("PAYMENT_CHANNELS", "mobile_money,bank")
+# Payments. "mock" is a test checkout for development only.
+PAYMENT_PROVIDER = env("PAYMENT_PROVIDER", "mock" if DEBUG else "paystack")
+PAYSTACK_SECRET_KEY = env("PAYSTACK_SECRET_KEY")
+# Checkout channels shown to buyers: mobile money and bank accounts.
+PAYSTACK_CHANNELS = env_list("PAYSTACK_CHANNELS", "mobile_money,bank")
+MAX_DOWNLOADS_PER_ORDER = env_int("MAX_DOWNLOADS_PER_ORDER", 5)
 
-# Production hardening (only when DEBUG is off, so local development stays plain HTTP).
-if IS_VERCEL_DEPLOY and DEBUG:
-    raise ImproperlyConfigured("Vercel deployments must set DJANGO_DEBUG=0.")
+# Behind a TLS-terminating proxy (Caddy in docker-compose.yml).
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+SESSION_COOKIE_HTTPONLY = True
 
-if not DEBUG:
-    if IS_VERCEL_DEPLOY and not DATABASE_URL:
-        raise ImproperlyConfigured("Vercel deployments require DATABASE_URL; SQLite storage is not persistent.")
-    if len(SECRET_KEY) < 32 or SECRET_KEY == "dev-insecure-change-me-in-production":
-        raise ImproperlyConfigured("Set DJANGO_SECRET_KEY to a random value of at least 32 characters.")
-    if not PAYSTACK_SECRET_KEY or PAYMENT_PROVIDER != "paystack":
-        raise ImproperlyConfigured(
-            "Production requires PAYSTACK_SECRET_KEY and PAYMENT_PROVIDER=paystack; mock checkout is local-only."
-        )
-
-    # Serve fingerprinted static assets from Django without a separate web server.
-    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
-    STORAGES = {
-        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
-    }
-
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
-    SECURE_HSTS_SECONDS = int(env("DJANGO_HSTS_SECONDS", "3600"))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "INFO"},
+}

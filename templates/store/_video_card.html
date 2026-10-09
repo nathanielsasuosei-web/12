@@ -1,7 +1,0 @@
-<article class="card">
-  <div class="card-body">
-    <h3>{{ video.title }}</h3>
-    <p class="muted">{{ video.description|truncatechars:120 }}</p>
-    <a class="btn btn-small" href="{% url 'video_list' %}#video-{{ video.pk }}">Watch</a>
-  </div>
-</article>

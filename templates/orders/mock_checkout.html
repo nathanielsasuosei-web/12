@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Test checkout · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="section narrow">
+  <div class="notice">Development only. This test checkout does not take real money. It is disabled when DEBUG is off.</div>
+  <h1>Test checkout</h1>
+  <p>{{ order.beat.title }} · GHS {{ order.amount_ghs }} · {{ order.reference }}</p>
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn btn-large" type="submit">Simulate successful payment</button>
+  </form>
+</section>
+{% endblock %}

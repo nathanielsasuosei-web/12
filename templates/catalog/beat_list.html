@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Beats · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head">
+    <h1>Beats</h1>
+  </div>
+  <form method="get" class="filters" role="search">
+    <input type="search" name="q" value="{{ query }}" placeholder="Search beats" aria-label="Search beats">
+    <select name="genre" aria-label="Genre">
+      <option value="">All genres</option>
+      {% for g in genres %}<option value="{{ g }}" {% if g == genre %}selected{% endif %}>{{ g }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-small" type="submit">Filter</button>
+  </form>
+  {% if page.object_list %}
+    <div class="grid">{% for beat in page.object_list %}{% include "catalog/_beat_card.html" %}{% endfor %}</div>
+    <nav class="pager" aria-label="Pages">
+      {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&q={{ query|urlencode }}&genre={{ genre|urlencode }}">&larr; Newer</a>{% endif %}
+      {% if page.has_next %}<a href="?page={{ page.next_page_number }}&q={{ query|urlencode }}&genre={{ genre|urlencode }}">Older &rarr;</a>{% endif %}
+    </nav>
+  {% else %}
+    <p class="empty">No beats match your search yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

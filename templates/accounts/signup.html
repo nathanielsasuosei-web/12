@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Create account · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="auth">
+  <h1>Create your account</h1>
+  <p class="lead">Use your email. Receipts and download links are sent there.</p>
+  <form method="post" class="form" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
+        {% for error in field.errors %}<p class="error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    {% if form.non_field_errors %}{% for error in form.non_field_errors %}<p class="error">{{ error }}</p>{% endfor %}{% endif %}
+    <button class="btn btn-large" type="submit">Create account</button>
+  </form>
+  <p class="small">Already registered? <a href="{% url 'accounts:login' %}">Sign in</a></p>
+</section>
+{% endblock %}

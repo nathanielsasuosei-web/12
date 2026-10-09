@@ -3,38 +3,42 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ SITE_NAME }} · Beats & Videos{% endblock %}</title>
+  <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}Preview and buy beats from the producer. Pay with mobile money or bank.{% endblock %}">
   <link rel="stylesheet" href="{% static 'css/site.css' %}">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="{% url 'home' %}"><span class="brand-mark">12</span> Beats</a>
-    <nav>
-      <a href="{% url 'beat_list' %}">Beats</a>
-      <a href="{% url 'video_list' %}">Videos</a>
-      <a href="{% url 'contact' %}">Contact</a>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="{% url 'catalog:home' %}"><span class="brand-mark" aria-hidden="true"></span>{{ SITE_NAME }}</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="{% url 'catalog:beat_list' %}">Beats</a>
+      <a href="{% url 'catalog:video_list' %}">Videos</a>
+      <a href="{% url 'contact:contact' %}">Contact</a>
       {% if user.is_authenticated %}
-        <a href="{% url 'dashboard' %}">My purchases</a>
-        {% if user.is_staff %}<a href="{% url 'admin:index' %}">Producer admin</a>{% endif %}
-        <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button class="link-btn">Log out</button></form>
+        <a href="{% url 'orders:my_orders' %}">My purchases</a>
+        <form method="post" action="{% url 'accounts:logout' %}" class="inline-form">{% csrf_token %}<button type="submit" class="nav-button">Sign out</button></form>
       {% else %}
-        <a href="{% url 'login' %}">Log in</a>
-        <a class="btn btn-small" href="{% url 'signup' %}">Create account</a>
+        <a href="{% url 'accounts:login' %}">Sign in</a>
+        <a class="btn btn-small" href="{% url 'accounts:signup' %}">Create account</a>
       {% endif %}
     </nav>
   </header>
 
-  <main>
-    {% if messages %}
-      <div class="messages">
-        {% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}
-      </div>
-    {% endif %}
+  {% if messages %}
+    <div class="messages" role="status">
+      {% for message in messages %}
+        <p class="message message-{{ message.tags|default:'info' }}">{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <main id="main">
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="footer">
-    <p>© {{ SITE_NAME }} · Original beats, instant delivery by email.</p>
+  <footer class="site-footer">
+    <p>&copy; {% now "Y" %} {{ SITE_NAME }}. Payments are processed securely by Paystack.</p>
   </footer>
   {% block scripts %}{% endblock %}
 </body>
