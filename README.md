@@ -63,6 +63,8 @@ Set these variables in every Vercel environment you deploy to (including Preview
 - `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS` for your custom domain
 - SMTP settings and `PRODUCER_EMAIL`
 
+A variable left empty counts as unset and uses its default, except that an empty `DJANGO_DEBUG` means off. A value the app can't read, such as `EMAIL_PORT=abc`, stops the build and is named in the error.
+
 The app adds Vercel's deployment hostnames to the allowed-host and CSRF lists automatically. Run `python manage.py migrate` against the configured database before serving real orders. Vercel functions have an ephemeral filesystem and a 4.5 MB request/response body limit: this project currently stores uploads on the local filesystem, so beat, cover, and video uploads won't persist there. Add an object-storage backend before using admin uploads on Vercel. The Docker Compose setup above supports persistent media volumes on a single host.
 
 `vercel.json` runs `python manage.py check_production` as the build command. If a required variable is missing or unsafe for that environment, the build stops and lists every problem. The app runs the same checks when it starts, so it never serves with an incomplete configuration. To check before deploying, export the same variables locally and run `python manage.py check_production`. Builds from before this check existed failed with `Failed to read Django application settings from .../manage.py`; the lines under that message name the missing variable.

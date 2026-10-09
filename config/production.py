@@ -13,7 +13,8 @@ from django.core.exceptions import ImproperlyConfigured
 
 def production_config_errors():
     """Return one message for each setting that stops the current configuration from serving production."""
-    errors = []
+    # Invalid environment variables come first, named one by one, so the message says what to fix.
+    errors = list(settings.CONFIGURATION_ERRORS)
     if settings.IS_VERCEL_DEPLOY and settings.DEBUG:
         errors.append("Vercel deployments must set DJANGO_DEBUG=0.")
     if not settings.DEBUG:
