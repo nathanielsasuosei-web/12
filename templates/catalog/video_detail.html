@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ video.title }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="section">
+  <h1>{{ video.title }}</h1>
+  <div class="video-frame">
+    {% if video.youtube_id %}
+      <iframe src="https://www.youtube-nocookie.com/embed/{{ video.youtube_id }}" title="{{ video.title }}" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    {% elif video.video_file %}
+      <video controls preload="metadata" src="{{ video.video_file.url }}" {% if video.thumbnail %}poster="{{ video.thumbnail.url }}"{% endif %}></video>
+    {% endif %}
+  </div>
+  {% if video.description %}<p class="description">{{ video.description|linebreaksbr }}</p>{% endif %}
+  <p><a href="{% url 'catalog:video_list' %}">&larr; All videos</a></p>
+</section>
+{% endblock %}

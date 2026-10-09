@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Thank you · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="section narrow">
+  <h1>Thanks, message sent</h1>
+  <p>A confirmation is on its way to your inbox. The producer will reply by email.</p>
+  <p><a class="btn" href="{% url 'catalog:beat_list' %}">Browse beats</a></p>
+</section>
+{% endblock %}

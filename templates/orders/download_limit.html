@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Download limit · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="section narrow">
+  <h1>Download limit reached</h1>
+  <p>This link has been used {{ limit }} times. Contact the producer for help.</p>
+  <p><a class="btn" href="{% url 'contact:contact' %}">Contact the producer</a></p>
+</section>
+{% endblock %}

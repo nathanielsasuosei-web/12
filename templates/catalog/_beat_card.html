@@ -1,0 +1,13 @@
+<article class="card beat-card">
+  <a class="card-cover" href="{{ beat.get_absolute_url }}" aria-label="{{ beat.title }}">
+    {% if beat.cover_image %}<img src="{{ beat.cover_image.url }}" alt="" loading="lazy">{% else %}<span class="cover-fallback" aria-hidden="true">{{ beat.title|slice:":1" }}</span>{% endif %}
+  </a>
+  <div class="card-body">
+    <h3><a href="{{ beat.get_absolute_url }}">{{ beat.title }}</a></h3>
+    <p class="meta">{% if beat.genre %}{{ beat.genre }}{% endif %}{% if beat.bpm %} · {{ beat.bpm }} BPM{% endif %}{% if beat.musical_key %} · {{ beat.musical_key }}{% endif %}</p>
+    <div class="card-foot">
+      <span class="price">GHS {{ beat.price_ghs }}</span>
+      <a class="btn btn-small" href="{{ beat.get_absolute_url }}">View</a>
+    </div>
+  </div>
+</article>

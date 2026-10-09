@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Videos · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head"><h1>Videos</h1></div>
+  {% if page.object_list %}
+    <div class="grid">
+      {% for video in page.object_list %}
+        <article class="card video-card">
+          <a class="card-cover" href="{{ video.get_absolute_url }}">
+            {% if video.thumbnail %}<img src="{{ video.thumbnail.url }}" alt="" loading="lazy">{% else %}<span class="cover-fallback" aria-hidden="true">&#9654;</span>{% endif %}
+          </a>
+          <div class="card-body"><h3><a href="{{ video.get_absolute_url }}">{{ video.title }}</a></h3></div>
+        </article>
+      {% endfor %}
+    </div>
+    <nav class="pager" aria-label="Pages">
+      {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">&larr; Newer</a>{% endif %}
+      {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Older &rarr;</a>{% endif %}
+    </nav>
+  {% else %}
+    <p class="empty">No videos yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

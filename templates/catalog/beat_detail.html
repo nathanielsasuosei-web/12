@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ beat.title }} · {{ SITE_NAME }}{% endblock %}
+{% block description %}{{ beat.description|truncatechars:150 }}{% endblock %}
+{% block content %}
+<section class="section detail">
+  <div class="detail-cover card-cover">
+    {% if beat.cover_image %}<img src="{{ beat.cover_image.url }}" alt="Cover art for {{ beat.title }}">{% else %}<span class="cover-fallback" aria-hidden="true">{{ beat.title|slice:":1" }}</span>{% endif %}
+  </div>
+  <div class="detail-info">
+    <p class="eyebrow">{{ beat.genre|default:"Beat" }}</p>
+    <h1>{{ beat.title }}</h1>
+    <p class="meta">{% if beat.bpm %}{{ beat.bpm }} BPM{% endif %}{% if beat.musical_key %} · {{ beat.musical_key }}{% endif %}</p>
+    {% if beat.description %}<p class="description">{{ beat.description|linebreaksbr }}</p>{% endif %}
+
+    <p class="label">Preview</p>
+    <audio class="player" controls preload="none" src="{{ beat.preview_audio.url }}">Your browser does not support audio.</audio>
+
+    <div class="buy-box">
+      <p class="price-large">GHS {{ beat.price_ghs }}</p>
+      {% if already_bought %}
+        <p>You already own this beat.</p>
+        <a class="btn" href="{% url 'orders:my_orders' %}">Go to My purchases</a>
+      {% elif user.is_authenticated %}
+        <form method="post" action="{% url 'orders:start' beat.slug %}">
+          {% csrf_token %}
+          <button class="btn btn-large" type="submit">Buy now</button>
+        </form>
+        <p class="small">Pay with mobile money or bank. The full files are emailed to you after payment.</p>
+      {% else %}
+        <a class="btn btn-large" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Sign in to buy</a>
+        <p class="small">New here? <a href="{% url 'accounts:signup' %}">Create a free account</a> first.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

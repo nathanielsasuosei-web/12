@@ -1,0 +1,10 @@
+New sale.
+
+Beat: {{ order.beat.title }}
+Amount: GHS {{ order.amount_ghs }}
+Buyer: {{ order.user.get_full_name|default:"(no name)" }} <{{ order.user.email }}>
+Order: {{ order.reference }}
+Paid via: {{ order.channel|default:"Paystack" }}
+Transaction: {{ order.provider_transaction_id|default:"-" }}
+
+Orders in admin: {{ admin_url }}

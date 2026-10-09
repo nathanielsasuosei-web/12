@@ -1,96 +1,96 @@
-# 12 — Beat & Video Store
+# Beat Store
 
-A storefront for a music producer, built with Django.
+A website for a music producer. Visitors listen to previews and watch videos. Artists create an account and buy beats with mobile money or a bank account through Paystack. After payment, the full files are emailed to the buyer and are also available in their account. The producer uploads beats and videos in the Django admin, and receives sale and contact emails.
 
-- **Admin (producer):** upload beats (full audio + optional streamable preview + cover, price, BPM, key) and videos (file or YouTube/Vimeo link) at `/admin/`. Every purchase appears under *Orders* and every artist message under *Contact messages*.
-- **Artists (customers):** sign up, log in, browse beats and videos, stream previews, and buy beats.
-- **Payments:** Paystack checkout with **mobile money** and **bank** channels. Payments are verified server-side and via Paystack webhooks, and each order is fulfilled exactly once.
-- **Delivery:** after payment, the buyer gets an email with a receipt, a download link, and the beat attached when it is under the size limit. The producer gets a "new sale" email. Buyers can also see their purchases at `/dashboard/`.
-- **Messages by email:** the `/contact/` page forwards artist messages to the producer's inbox and sends the artist a confirmation email.
-- **Animated red hero** on the home page (glowing canvas equalizer, floating notes, shimmer text, scrolling ticker), with reduced-motion support.
+- Red and black theme with an animated hero
+- Admin uploads for beats (preview MP3, full file, cover) and videos (YouTube link or file)
+- Artist accounts with sign-up and sign-in by email
+- Paystack checkout with mobile money and bank, verified server-side and by signed webhook
+- Paid-only downloads with a per-order download limit
+- Email for receipts, download links, sale alerts, welcome, and contact messages
 
-## Run locally
+## Run it locally
+
+Requires Python 3.12 (3.11 works too).
 
 ```bash
-python3 -m venv .venv && . .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+export DJANGO_DEBUG=1            # development only
 python manage.py migrate
-python manage.py createsuperuser        # producer/admin account
-python manage.py runserver 0.0.0.0:8000
+python manage.py createsuperuser --username producer@example.com --email producer@example.com
+python manage.py runserver
 ```
 
-Open http://localhost:8000 (admin at `/admin/`).
+Open http://localhost:8000. Emails print to the terminal in development. Purchases use a test checkout, so no real money moves. Set `DJANGO_DEBUG=1` only on your own machine.
 
-Optional demo content (covers, previews, beats, a video) for a first look:
+## Producer: upload beats and videos
 
-```bash
-python manage.py seed_demo
-```
+1. Go to `/admin/` and sign in with the superuser account.
+2. **Beats → Add beat.** Fill in the title, genre, BPM, key, and price in GHS. Upload:
+   - **Preview audio** (MP3). This is public, so keep it short.
+   - **Full audio** (WAV, MP3, FLAC, or ZIP). Only paying buyers get this. It is stored outside the public media folder.
+   - **Cover image** (optional).
+   Tick **Is published** to show it on the site.
+3. **Videos → Add video.** Paste a YouTube link or upload an MP4, WebM, or MOV file. Tick **Is published**.
+4. **Orders** lists every sale. Use the *Resend download email* action if a buyer loses their email.
+5. **Contact messages** lists messages sent from the contact page. Replies also arrive in your inbox, because the reply-to address is the sender.
 
-This also creates a producer login (`producer` / `producer123`) if one does not exist yet.
+## Payments with Paystack
 
-With no `PAYSTACK_SECRET_KEY` set, checkout runs in **test mode**: a local page lets you simulate a mobile-money or bank payment, which exercises the full fulfilment and email flow. No money moves.
+1. Create a Paystack account and enable mobile money and bank payments for Ghana.
+2. Put your secret key in `PAYSTACK_SECRET_KEY`. Use `sk_test_…` while testing and `sk_live_…` when you go live.
+3. In the Paystack dashboard, set the webhook URL to `https://YOUR-DOMAIN/orders/paystack/webhook/`.
+4. Buyers choose mobile money or bank on the Paystack checkout page. The channels are set by `PAYSTACK_CHANNELS`.
 
-## Production deployment (Docker Compose)
+Payment is confirmed in two ways. The buyer is sent back to the site, and the site verifies the transaction with Paystack. Paystack also sends a signed webhook. An order is marked paid only once, and only when the amount and currency match the order.
 
-The repository includes a production Docker image, PostgreSQL, and Caddy for automatic HTTPS. This is a single-host/VPS deployment: point a domain at the host, allow inbound ports 80 and 443, and install Docker Engine with the Compose plugin. No cloud account or deployment credentials are needed by the app itself.
+## Deploy with Docker (recommended)
 
-1. Copy `.env.example` to `.env`. Set `DOMAIN`, `SITE_URL`, `DJANGO_ALLOWED_HOSTS`, and `DJANGO_CSRF_TRUSTED_ORIGINS` to your real domain. Generate two different random values with `python3 -c 'import secrets; print(secrets.token_hex(32))'` for `DJANGO_SECRET_KEY` and `POSTGRES_PASSWORD`.
-2. Set a live `PAYSTACK_SECRET_KEY`, the currency configured in Paystack, SMTP credentials, `DEFAULT_FROM_EMAIL`, and `PRODUCER_EMAIL`. Production refuses to start with the development secret, a missing Paystack key, or mock payments enabled.
-3. Build the image, start PostgreSQL, apply migrations, then bring up the site and HTTPS proxy:
+1. On a server with Docker and a domain pointing at it, copy `.env.example` to `.env` and fill in every value. Generate the secret key with `python -c "import secrets; print(secrets.token_urlsafe(64))"`.
+2. Start the stack:
 
    ```bash
-   docker compose build
-   docker compose up -d db
-   docker compose run --rm web python manage.py migrate --noinput
-   docker compose up -d web caddy
-   docker compose run --rm web python manage.py createsuperuser
+   docker compose up -d --build
+   docker compose exec app python manage.py createsuperuser --username producer@example.com --email producer@example.com
    ```
 
-4. In Paystack, set the webhook URL to `https://yourdomain.com/payments/webhook/`.
+Caddy gets an HTTPS certificate for `SITE_DOMAIN` automatically. The app runs migrations on start.
 
-For later releases, run `docker compose build web`, `docker compose run --rm web python manage.py migrate --noinput`, then `docker compose up -d web caddy`. PostgreSQL and uploaded media live in named Docker volumes; back them up independently and do not use `docker compose down -v` unless you intend to delete that data. Caddy serves public covers/videos, while paid beat files are only delivered through the existing Django download endpoint. This starter is intended for one host; use managed database/object storage and an external backup plan before scaling out.
+The app refuses to start in production (`DJANGO_DEBUG=0`) unless it has a real secret key, your domain in `DJANGO_ALLOWED_HOSTS`, an `https://` `SITE_URL`, `PAYMENT_PROVIDER=paystack`, a Paystack key, a producer email, and SMTP settings. The error message lists everything that is missing.
 
-### Alternative: Vercel
+Data lives in Docker volumes: `app-data` (database), `media` (public uploads), and `private` (full beat files). Back them up together.
 
-`vercel.json` pins the Framework Preset to Django, avoiding the Next.js build. Vercel detects `manage.py`, loads `config/wsgi.py`, runs `collectstatic` automatically, and serves collected static files from its CDN. Deploy a commit containing `vercel.json`, set Vercel's Root Directory to the repository root, and clear any manual `next build` command or Next.js Output Directory override.
+## Customise
 
-Set these variables in every Vercel environment you deploy to (including Preview if used). Vercel makes a variable available only to the environments it is scoped to, so a variable added only to Production is missing from preview builds:
-
-- `DJANGO_DEBUG=0` and a random `DJANGO_SECRET_KEY` of at least 32 characters
-- `DATABASE_URL` for a managed PostgreSQL database
-- `PAYSTACK_SECRET_KEY`, `PAYMENT_CURRENCY`, and `SITE_URL`
-- `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS` for your custom domain
-- SMTP settings and `PRODUCER_EMAIL`
-
-A variable left empty counts as unset and uses its default, except that an empty `DJANGO_DEBUG` means off. A value the app can't read, such as `EMAIL_PORT=abc`, stops the build and is named in the error.
-
-The app adds Vercel's deployment hostnames to the allowed-host and CSRF lists automatically. Run `python manage.py migrate` against the configured database before serving real orders. Vercel functions have an ephemeral filesystem and a 4.5 MB request/response body limit: this project currently stores uploads on the local filesystem, so beat, cover, and video uploads won't persist there. Add an object-storage backend before using admin uploads on Vercel. The Docker Compose setup above supports persistent media volumes on a single host.
-
-`vercel.json` runs `python manage.py check_production` as the build command. If a required variable is missing or unsafe for that environment, the build stops and lists every problem. The app runs the same checks when it starts, so it never serves with an incomplete configuration. To check before deploying, export the same variables locally and run `python manage.py check_production`. Builds from before this check existed failed with `Failed to read Django application settings from .../manage.py`; the lines under that message name the missing variable.
+- **Name and contact:** `SITE_NAME` and `PRODUCER_EMAIL`.
+- **Colours:** the variables at the top of `static/css/site.css` (`--red`, `--ink`, and so on).
+- **Hero text:** `templates/catalog/home.html`.
+- **Emails:** the plain-text templates in `templates/emails/`.
 
 ## Tests
 
 ```bash
-python manage.py test store
+python manage.py test
 ```
 
-The tests cover signup, purchases in test mode, Paystack initialise and verify, amount mismatch rejection, webhook signature checks, one-time fulfilment, and download access control.
+The suite covers the catalog, sign-up and sign-in, the payment flow with a mocked Paystack (signature checks, amount checks, idempotent webhooks), paid-only downloads and limits, the contact form and honeypot, and production safety checks.
 
 ## Project layout
 
 ```
-Dockerfile         production Django image
-compose.yaml       PostgreSQL, web app, HTTPS proxy
-Caddyfile          TLS reverse proxy + public media routing
-config/            settings, root URLs
-store/
-  models.py        Beat, Video, Order
-  payments.py      Paystack client + webhook signature check
-  services.py      fulfil_order / confirm_payment (single source of truth for "paid")
-  emails.py        buyer receipt + beat, producer notification
-  views.py         catalogue, checkout, payment return, webhook, download, dashboard
-  tests/           test suite
-templates/         Django templates (hero on home.html)
-static/            CSS and hero animation (js/hero.js)
+config/        settings, URLs, WSGI, production safety checks
+catalog/       beats, videos, home and browse pages (admin uploads)
+orders/        orders, Paystack and mock payments, webhook, downloads, emails
+accounts/      sign-up and sign-in
+contact/       contact form, emailed to the producer
+core/          shared email helper
+templates/     HTML and email templates
+static/        CSS theme and hero animation
 ```
+
+## Limits to know about
+
+- **Previews are not watermarked.** Anyone can download the public preview MP3. Keep previews short and low quality.
+- **SQLite** is fine for one producer. For heavy traffic, move `DATABASES` to PostgreSQL.
+- **Refunds** are handled in the Paystack dashboard. The site does not revoke downloads automatically.

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.reference }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<section class="section narrow">
+  <p class="eyebrow">Order {{ order.reference }}</p>
+  <h1>{{ order.beat.title }}</h1>
+  <p><span class="badge badge-{{ order.status }}">{{ order.get_status_display }}</span> &nbsp; GHS {{ order.amount_ghs }}</p>
+
+  {% if order.is_paid %}
+    <div class="card panel">
+      <h2>Your download</h2>
+      <p>The full files were also emailed to {{ order.user.email }}.</p>
+      <a class="btn btn-large" href="{{ order.download_url }}">Download {{ order.beat.title }}</a>
+      <p class="small">Downloads used: {{ order.download_count }} of {{ MAX_DOWNLOADS_PER_ORDER }}. Keep the email link safe. It works as a personal download link.</p>
+    </div>
+  {% else %}
+    <div class="card panel">
+      <h2>Payment pending</h2>
+      <p>Finish paying to get your download. If you have already paid, this page updates when Paystack confirms the payment.</p>
+      {% if order.status != "paid" %}
+      <form method="post" action="{% url 'orders:pay' order.reference %}">
+        {% csrf_token %}
+        <button class="btn" type="submit">Pay GHS {{ order.amount_ghs }}</button>
+      </form>
+      {% endif %}
+    </div>
+  {% endif %}
+  <p><a href="{% url 'orders:my_orders' %}">&larr; All purchases</a></p>
+</section>
+{% endblock %}

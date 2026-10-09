@@ -2,28 +2,28 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
 COPY . .
 
-# Collect fingerprinted static assets at build time. These build-only values are
-# not persisted as runtime environment variables or used for payment requests.
+# Collect static files at build time. The values below are placeholders used only for this
+# step. The running container reads its real settings from .env.
 RUN DJANGO_DEBUG=0 \
-    DJANGO_SECRET_KEY=build-only-placeholder-secret-key-not-for-runtime \
-    PAYSTACK_SECRET_KEY=sk_test_build_only \
-    python manage.py collectstatic --noinput \
-    && groupadd --system --gid 10001 app \
-    && useradd --system --uid 10001 --gid app --create-home app \
-    && mkdir -p /data/media \
-    && chown -R app:app /app /data/media
+    DJANGO_SECRET_KEY=build-only-placeholder-not-used-at-runtime-0123456789-abcdefghijklmnopqrstuvwxyz \
+    DJANGO_ALLOWED_HOSTS=build.local \
+    python manage.py collectstatic --noinput
 
+RUN useradd --create-home --uid 1000 app \
+    && mkdir -p /app/data /app/media /app/private_media \
+    && chown -R app:app /app/data /app/media /app/private_media
 USER app
 
 EXPOSE 8000
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --access-logfile -"]

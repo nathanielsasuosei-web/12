@@ -1,5 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "django",
-  "buildCommand": "python manage.py check_production"
-}

@@ -1,0 +1,22 @@
+Hi {{ order.user.first_name|default:"there" }},
+
+Thank you for buying "{{ beat.title }}" (GHS {{ order.amount_ghs }}).
+
+Download your full files here:
+{{ download_url }}
+
+This is your personal link. It can be used {{ max_downloads }} times. Keep it private.
+
+Receipt
+-------
+Order reference: {{ order.reference }}
+Beat: {{ beat.title }}
+Amount paid: GHS {{ order.amount_ghs }}
+Payment method: {{ order.channel|default:"Paystack" }}
+Paid on: {{ order.paid_at|date:"j M Y, H:i" }}
+
+You can also see this order in your account: {{ orders_url }}
+
+Questions? Reply to this email.
+
+{{ site_name }}
